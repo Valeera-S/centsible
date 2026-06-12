@@ -24,7 +24,8 @@ parses warned.
 - The complete real memo (about 250 lines, June 2025 to June 2026) is now a
   permanent fixture (`memo.fullYear.test.ts`): all 45 hand-written 总 lines must
   reconcile block-by-block, and the only allowed unparsed line is the genuine typo
-  `1213日：无`.
+  `1213日：无`. The fixture stays on the owner's machine (gitignored) because it is
+  real personal financial data; the repository keeps synthetic per-behavior tests.
 - Subtotal checks are per paragraph, matching how the human actually wrote them.
 
 ## Why
