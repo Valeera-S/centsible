@@ -1,7 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatCents } from '../../domain/money';
 import type { Period, TrendBucket } from '../../domain/stats';
-import { strings } from '../../i18n/strings';
+import { useStrings } from '../../i18n/localeContext';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -34,6 +34,7 @@ interface TrendTooltipProps {
 }
 
 function TrendTooltip({ active, payload, label }: TrendTooltipProps) {
+  const strings = useStrings();
   const datum = payload?.[0]?.payload as ChartDatum | undefined;
   if (!active || !datum) return null;
   return (

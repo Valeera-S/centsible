@@ -2,28 +2,34 @@ import { lazy, Suspense, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDb } from '../../db/dbContext';
 import { getSettings, listCategories } from '../../db/repo';
+import { daysSince, needsBackupReminder } from '../../domain/backupReminder';
 import { computeMonthlyBudget } from '../../domain/budget';
-import { parseIsoDate, todayIso } from '../../domain/dates';
+import { monthKey, parseIsoDate, todayIso } from '../../domain/dates';
 import { formatCents } from '../../domain/money';
 import {
   categoryBreakdown,
+  cumulativeDailySpend,
+  dailyExpenseMap,
   periodRange,
   shiftReference,
   summarize,
   trendSeries,
   type Period,
 } from '../../domain/stats';
-import { strings } from '../../i18n/strings';
+import { useStrings } from '../../i18n/localeContext';
 import { BudgetRing } from './BudgetRing';
 import { CategoryDonut } from './CategoryDonut';
+import { Heatmap } from './Heatmap';
 
 // Recharts is the heaviest dependency; loading it lazily keeps the initial
 // bundle (and first paint) lean while the service worker caches the chunk.
 const TrendChart = lazy(() =>
   import('./TrendChart').then((module) => ({ default: module.TrendChart })),
 );
+const PaceChart = lazy(() =>
+  import('./PaceChart').then((module) => ({ default: module.PaceChart })),
+);
 
-const d = strings.dashboard;
 const MONTH_NAMES = [
   'January',
   'February',
@@ -54,8 +60,11 @@ function periodLabel(period: Period, reference: string): string {
 
 export function DashboardPage() {
   const db = useDb();
+  const d = useStrings().dashboard;
   const [period, setPeriod] = useState<Period>('month');
   const [reference, setReference] = useState(() => todayIso());
+  // Stable per mount; the reminder only needs day-level resolution.
+  const [now] = useState(() => Date.now());
 
   const transactions = useLiveQuery(() => db.transactions.toArray(), [db]);
   const categories = useLiveQuery(() => listCategories(db), [db]) ?? [];
@@ -70,6 +79,10 @@ export function DashboardPage() {
   const buckets = trendSeries(transactions, period, reference);
 
   const refParts = parseIsoDate(reference);
+  const today = todayIso();
+  const excludedCategoryIds = new Set(
+    categories.filter((c) => c.excludeFromBudget).map((c) => c.id),
+  );
   const budget =
     period === 'month' && refParts
       ? computeMonthlyBudget({
@@ -77,15 +90,59 @@ export function DashboardPage() {
           year: refParts.year,
           month: refParts.month,
           monthlyBudgetCents: settings.monthlyBudgetCents,
-          excludedCategoryIds: new Set(
-            categories.filter((c) => c.excludeFromBudget).map((c) => c.id),
-          ),
-          today: todayIso(),
+          excludedCategoryIds,
+          today,
         })
       : null;
 
+  let pace: { actual: number[]; cutoffDay: number | null; lastMonth: number[] } | null = null;
+  if (budget && refParts) {
+    const key = monthKey(reference);
+    const todayKey = monthKey(today);
+    const cutoffDay = todayKey > key ? null : todayKey === key ? Number(today.slice(8)) : 0;
+    const prev = parseIsoDate(shiftReference('month', reference, -1));
+    pace = {
+      actual: cumulativeDailySpend(
+        transactions,
+        refParts.year,
+        refParts.month,
+        excludedCategoryIds,
+      ),
+      cutoffDay,
+      lastMonth: prev
+        ? cumulativeDailySpend(transactions, prev.year, prev.month, excludedCategoryIds)
+        : [],
+    };
+  }
+
+  const heatmapRange = refParts
+    ? {
+        from: `${refParts.year}-01-01`,
+        to: today < `${refParts.year}-12-31` ? today : `${refParts.year}-12-31`,
+      }
+    : null;
+  const heatmap =
+    heatmapRange && heatmapRange.to >= heatmapRange.from
+      ? {
+          range: heatmapRange,
+          spendMap: dailyExpenseMap(transactions, heatmapRange, excludedCategoryIds),
+        }
+      : null;
+
+  const showBackupReminder = needsBackupReminder(settings.lastBackupAt, transactions.length, now);
+
   return (
     <div className="dashboard">
+      {showBackupReminder && (
+        <div className="backup-banner" role="status">
+          <span>
+            {d.backupReminder(
+              settings.lastBackupAt === undefined ? null : daysSince(settings.lastBackupAt, now),
+            )}
+          </span>
+          <a href="#/import">{d.backupReminderAction}</a>
+        </div>
+      )}
       <div className="dashboard-masthead reveal">
         <div className="period-switcher" role="group">
           {(['week', 'month', 'year'] as const).map((option) => (
@@ -155,6 +212,20 @@ export function DashboardPage() {
         </section>
       )}
 
+      {pace && (
+        <section className="ledger-section reveal" aria-label={d.paceRegion}>
+          <h2 className="section-label">{d.paceRegion}</h2>
+          <Suspense fallback={<div className="trend-chart" aria-hidden="true" />}>
+            <PaceChart
+              actual={pace.actual}
+              cutoffDay={pace.cutoffDay}
+              budgetCents={settings.monthlyBudgetCents}
+              lastMonth={pace.lastMonth.length > 0 ? pace.lastMonth : null}
+            />
+          </Suspense>
+        </section>
+      )}
+
       <section className="ledger-section reveal" aria-label={d.flowRegion}>
         <h2 className="section-label">{d.flowRegion}</h2>
         <div className="flow-strip">
@@ -194,6 +265,13 @@ export function DashboardPage() {
           <TrendChart buckets={buckets} period={period} />
         </Suspense>
       </section>
+
+      {heatmap && (
+        <section className="ledger-section reveal" aria-label={d.heatmapRegion}>
+          <h2 className="section-label">{d.heatmapRegion}</h2>
+          <Heatmap spendMap={heatmap.spendMap} range={heatmap.range} />
+        </section>
+      )}
     </div>
   );
 }

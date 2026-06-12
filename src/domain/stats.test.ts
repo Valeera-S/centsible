@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { categoryBreakdown, periodRange, shiftReference, summarize, trendSeries } from './stats';
+import {
+  categoryBreakdown,
+  cumulativeDailySpend,
+  dailyExpenseMap,
+  noSpendStreaks,
+  periodRange,
+  shiftReference,
+  summarize,
+  trendSeries,
+} from './stats';
 
 // 2026-06-11 is a Thursday.
 const REF = '2026-06-11';
@@ -81,6 +90,69 @@ describe('categoryBreakdown', () => {
       { categoryId: 'stipend', totalCents: 150000 },
       { categoryId: 'tutoring', totalCents: 8000 },
     ]);
+  });
+});
+
+describe('cumulativeDailySpend', () => {
+  const EXCLUDED = new Set(['rent']);
+  const tx = [
+    { type: 'expense', amountCents: 90000, categoryId: 'rent', date: '2026-06-01' },
+    { type: 'expense', amountCents: 1000, categoryId: 'dining', date: '2026-06-02' },
+    { type: 'expense', amountCents: 2000, categoryId: 'groceries', date: '2026-06-05' },
+    { type: 'expense', amountCents: -500, categoryId: 'dining', date: '2026-06-06' },
+    { type: 'income', amountCents: 99999, categoryId: 'stipend', date: '2026-06-03' },
+  ] as const;
+
+  it('accumulates budget-relevant spending day by day', () => {
+    const series = cumulativeDailySpend(tx, 2026, 6, EXCLUDED);
+    expect(series).toHaveLength(30);
+    expect(series[0]).toBe(0);
+    expect(series[1]).toBe(1000);
+    expect(series[3]).toBe(1000);
+    expect(series[4]).toBe(3000);
+    expect(series[5]).toBe(2500);
+    expect(series[29]).toBe(2500);
+  });
+});
+
+describe('dailyExpenseMap', () => {
+  it('nets daily expense totals, skipping excluded categories and income', () => {
+    const map = dailyExpenseMap(
+      [
+        { type: 'expense', amountCents: 1000, categoryId: 'dining', date: '2026-06-02' },
+        { type: 'expense', amountCents: 500, categoryId: 'dining', date: '2026-06-02' },
+        { type: 'expense', amountCents: 90000, categoryId: 'rent', date: '2026-06-01' },
+        { type: 'income', amountCents: 7777, categoryId: 'stipend', date: '2026-06-02' },
+        { type: 'expense', amountCents: 300, categoryId: 'other', date: '2026-07-01' },
+      ],
+      { from: '2026-06-01', to: '2026-06-30' },
+      new Set(['rent']),
+    );
+    expect(map.get('2026-06-02')).toBe(1500);
+    expect(map.has('2026-06-01')).toBe(false);
+    expect(map.has('2026-07-01')).toBe(false);
+  });
+});
+
+describe('noSpendStreaks', () => {
+  it('finds the longest and current runs of no-spend days', () => {
+    const spendDays = new Set(['2026-06-02', '2026-06-05']);
+    const result = noSpendStreaks(spendDays, { from: '2026-06-01', to: '2026-06-11' });
+    expect(result.longest).toBe(6);
+    expect(result.current).toBe(6);
+  });
+
+  it('resets the current streak when the last day has spending', () => {
+    const spendDays = new Set(['2026-06-11']);
+    const result = noSpendStreaks(spendDays, { from: '2026-06-01', to: '2026-06-11' });
+    expect(result.current).toBe(0);
+    expect(result.longest).toBe(10);
+  });
+
+  it('handles an all-quiet range', () => {
+    const result = noSpendStreaks(new Set(), { from: '2026-06-01', to: '2026-06-11' });
+    expect(result.current).toBe(11);
+    expect(result.longest).toBe(11);
   });
 });
 

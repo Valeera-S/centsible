@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DbProvider } from '../../db/DbProvider';
@@ -7,6 +7,7 @@ import { createDb, type CentsibleDb } from '../../db/db';
 import {
   addTransaction,
   exportBackup,
+  getSettings,
   listMerchantRules,
   listTransactions,
   seedDefaults,
@@ -204,6 +205,23 @@ describe('ImportPage backup flow', () => {
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Backup' }));
     expect(screen.getByRole('button', { name: 'Export backup' })).toBeInTheDocument();
+  });
+
+  it('records the export time so reminders can rely on it', async () => {
+    const objectUrl = vi.fn(() => 'blob:centsible');
+    Object.defineProperty(window.URL, 'createObjectURL', { configurable: true, value: objectUrl });
+    Object.defineProperty(window.URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Backup' }));
+    await user.click(screen.getByRole('button', { name: 'Export backup' }));
+
+    await waitFor(async () => {
+      const settings = await getSettings(db);
+      expect(settings.lastBackupAt).toBeGreaterThan(0);
+    });
+    expect(objectUrl).toHaveBeenCalled();
   });
 });
 

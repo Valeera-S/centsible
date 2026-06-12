@@ -15,11 +15,9 @@ import { formatCents } from '../../domain/money';
 import { suggestCategory } from '../../domain/merchantMap';
 import type { QuickEntryItem } from '../../domain/parse/quickEntry';
 import type { Category, Transaction } from '../../domain/types';
-import { strings } from '../../i18n/strings';
+import { useStrings } from '../../i18n/localeContext';
 import { QuickEntryBox } from './QuickEntryBox';
 import { TransactionForm, type TransactionFormDraft } from './TransactionForm';
-
-const t = strings.transactions;
 
 function shiftMonth(month: string, delta: number): string {
   const [year, m] = month.split('-').map(Number);
@@ -50,6 +48,7 @@ function dateLabel(date: string): string {
 
 export function TransactionsPage() {
   const db = useDb();
+  const t = useStrings().transactions;
   const [month, setMonth] = useState(() => monthKey(todayIso()));
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');

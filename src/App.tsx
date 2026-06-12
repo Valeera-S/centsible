@@ -1,19 +1,27 @@
 import { HashRouter, NavLink, Route, Routes } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { DbProvider } from './db/DbProvider';
+import { useDb } from './db/dbContext';
 import type { CentsibleDb } from './db/db';
+import { getSettings, updateSettings } from './db/repo';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ImportPage } from './features/import/ImportPage';
 import { TransactionsPage } from './features/transactions/TransactionsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
-import { strings } from './i18n/strings';
+import { LocaleContext, STRING_TABLES, type Locale } from './i18n/localeContext';
 
-interface AppProps {
-  db: CentsibleDb;
-}
+function AppShell() {
+  const db = useDb();
+  const settings = useLiveQuery(() => getSettings(db), [db]);
+  const locale: Locale = settings?.locale ?? 'en';
+  const strings = STRING_TABLES[locale];
 
-function App({ db }: AppProps) {
+  async function toggleLocale() {
+    await updateSettings(db, { locale: locale === 'en' ? 'zh' : 'en' });
+  }
+
   return (
-    <DbProvider db={db}>
+    <LocaleContext.Provider value={strings}>
       <HashRouter>
         <div className="app-shell">
           <header className="app-header">
@@ -25,6 +33,9 @@ function App({ db }: AppProps) {
               <NavLink to="/transactions">{strings.nav.transactions}</NavLink>
               <NavLink to="/import">{strings.nav.importData}</NavLink>
               <NavLink to="/settings">{strings.nav.settings}</NavLink>
+              <button type="button" className="locale-toggle" onClick={toggleLocale}>
+                {strings.languageToggle}
+              </button>
             </nav>
           </header>
           <main>
@@ -40,6 +51,14 @@ function App({ db }: AppProps) {
           </footer>
         </div>
       </HashRouter>
+    </LocaleContext.Provider>
+  );
+}
+
+function App({ db }: { db: CentsibleDb }) {
+  return (
+    <DbProvider db={db}>
+      <AppShell />
     </DbProvider>
   );
 }

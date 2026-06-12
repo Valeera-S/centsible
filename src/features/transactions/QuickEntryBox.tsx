@@ -5,7 +5,8 @@ import {
   type QuickEntryError,
   type QuickEntryItem,
 } from '../../domain/parse/quickEntry';
-import { strings } from '../../i18n/strings';
+import { useStrings } from '../../i18n/localeContext';
+import type { Strings } from '../../i18n/en';
 
 interface QuickEntryBoxProps {
   onCommit: (items: QuickEntryItem[]) => Promise<void> | void;
@@ -31,7 +32,7 @@ function speechRecognitionCtor(): SpeechRecognitionCtor | null {
     null) as SpeechRecognitionCtor | null;
 }
 
-function errorMessage(error: QuickEntryError): string {
+function errorMessage(error: QuickEntryError, strings: Strings): string {
   switch (error.reason) {
     case 'no-amount':
       return strings.quickEntry.errorNoAmount(error.segment);
@@ -43,6 +44,7 @@ function errorMessage(error: QuickEntryError): string {
 }
 
 export function QuickEntryBox({ onCommit }: QuickEntryBoxProps) {
+  const strings = useStrings();
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<QuickEntryError[]>([]);
   const [listening, setListening] = useState(false);
@@ -108,7 +110,7 @@ export function QuickEntryBox({ onCommit }: QuickEntryBoxProps) {
       {errors.length > 0 && (
         <div role="alert" className="quick-entry-errors">
           {errors.map((error) => (
-            <p key={error.segment + error.reason}>{errorMessage(error)}</p>
+            <p key={error.segment + error.reason}>{errorMessage(error, strings)}</p>
           ))}
         </div>
       )}

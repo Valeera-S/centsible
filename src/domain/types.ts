@@ -65,4 +65,8 @@ export interface MerchantRule {
 export interface Settings {
   monthlyBudgetCents: number;
   currency: 'USD';
+  /** UI language; defaults to English when absent. */
+  locale?: 'en' | 'zh';
+  /** Epoch ms of the most recent backup export. */
+  lastBackupAt?: number;
 }

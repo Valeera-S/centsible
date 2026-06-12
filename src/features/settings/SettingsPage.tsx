@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDb } from '../../db/dbContext';
 import {
@@ -16,15 +16,34 @@ import { FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID } from '../..
 import { todayIso } from '../../domain/dates';
 import { formatCents, parseAmount } from '../../domain/money';
 import type { Category, RecurringRule, TransactionType } from '../../domain/types';
-import { strings } from '../../i18n/strings';
+import { useStrings } from '../../i18n/localeContext';
 
-const s = strings.settings;
-const r = strings.recurring;
 const FALLBACK_IDS = new Set([FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID]);
 const NEW_CATEGORY_DEFAULT_COLOR = '#6b7280';
 
+function formatBytes(bytes: number): string {
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+interface StorageHealth {
+  persisted: boolean;
+  usageBytes: number | null;
+}
+
+async function readStorageHealth(): Promise<StorageHealth | null> {
+  const storage = navigator.storage;
+  if (!storage?.persisted) return null;
+  const persisted = await storage.persisted();
+  const estimate = storage.estimate ? await storage.estimate() : undefined;
+  return { persisted, usageBytes: estimate?.usage ?? null };
+}
+
 export function SettingsPage() {
   const db = useDb();
+  const strings = useStrings();
+  const s = strings.settings;
+  const r = strings.recurring;
   const settings = useLiveQuery(() => getSettings(db), [db]);
   const categories = useLiveQuery(() => listCategories(db), [db]) ?? [];
   const recurringRules = useLiveQuery(() => listRecurringRules(db), [db]) ?? [];
@@ -45,6 +64,17 @@ export function SettingsPage() {
   const [ruleStart, setRuleStart] = useState(() => todayIso());
   const [ruleError, setRuleError] = useState<string | null>(null);
   const [erased, setErased] = useState(false);
+  const [storageHealth, setStorageHealth] = useState<StorageHealth | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    readStorageHealth().then((health) => {
+      if (!cancelled) setStorageHealth(health);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
   const effectiveRuleCategory = expenseCategories.some((c) => c.id === ruleCategoryId)
@@ -296,6 +326,23 @@ export function SettingsPage() {
           {ruleError && <p role="alert">{ruleError}</p>}
           <button type="submit">{r.add}</button>
         </form>
+      </div>
+
+      <div className="storage-section">
+        <h2>{s.storageHeading}</h2>
+        {storageHealth && (
+          <p className="hint">
+            {storageHealth.persisted ? s.storagePersisted : s.storageNotPersisted}
+          </p>
+        )}
+        {storageHealth?.usageBytes != null && (
+          <p className="hint">{s.storageUsage(formatBytes(storageHealth.usageBytes))}</p>
+        )}
+        <p className="hint">
+          {settings?.lastBackupAt
+            ? s.lastBackup(new Date(settings.lastBackupAt).toISOString().slice(0, 10))
+            : s.lastBackupNever}
+        </p>
       </div>
 
       <div className="danger-section">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { BudgetSummary } from '../../domain/budget';
 import { formatCents } from '../../domain/money';
-import { strings } from '../../i18n/strings';
+import { useStrings } from '../../i18n/localeContext';
 
 const SIZE = 220;
 const STROKE = 14;
@@ -13,6 +13,7 @@ interface BudgetRingProps {
 }
 
 export function BudgetRing({ summary }: BudgetRingProps) {
+  const strings = useStrings();
   const over = summary.remainingCents < 0;
   const ratio = summary.budgetCents > 0 ? Math.min(1, summary.spentCents / summary.budgetCents) : 0;
 

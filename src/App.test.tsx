@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { createDb, type CentsibleDb } from './db/db';
-import { seedDefaults } from './db/repo';
+import { getSettings, seedDefaults } from './db/repo';
 
 let db: CentsibleDb;
 let counter = 0;
@@ -35,5 +35,21 @@ describe('App', () => {
 
     await user.click(screen.getByRole('link', { name: 'Settings' }));
     expect(await screen.findByText('Monthly budget')).toBeInTheDocument();
+  });
+
+  it('defaults to English and switches to Chinese with one click, persisted', async () => {
+    const user = userEvent.setup();
+    render(<App db={db} />);
+
+    expect(await screen.findByRole('link', { name: 'Transactions' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '中文' }));
+
+    expect(await screen.findByRole('link', { name: '交易' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Transactions' })).not.toBeInTheDocument();
+    expect((await getSettings(db)).locale).toBe('zh');
+
+    await user.click(screen.getByRole('button', { name: 'English' }));
+    expect(await screen.findByRole('link', { name: 'Transactions' })).toBeInTheDocument();
   });
 });

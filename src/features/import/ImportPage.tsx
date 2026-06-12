@@ -9,6 +9,7 @@ import {
   listCategories,
   listMerchantRules,
   listTransactions,
+  updateSettings,
 } from '../../db/repo';
 import { FALLBACK_EXPENSE_CATEGORY_ID } from '../../domain/categories';
 import { todayIso } from '../../domain/dates';
@@ -19,9 +20,7 @@ import { suggestCategory } from '../../domain/merchantMap';
 import { parseChaseCsv } from '../../domain/parse/chaseCsv';
 import { parseMemo } from '../../domain/parse/memo';
 import type { Transaction, TransactionSource } from '../../domain/types';
-import { strings } from '../../i18n/strings';
-
-const s = strings.importPage;
+import { useStrings } from '../../i18n/localeContext';
 
 type Tab = 'memo' | 'csv' | 'backup';
 
@@ -46,6 +45,7 @@ interface ParseOutcome {
 
 export function ImportPage() {
   const db = useDb();
+  const s = useStrings().importPage;
   const categories = useLiveQuery(() => listCategories(db), [db]) ?? [];
   const merchantRules = useLiveQuery(() => listMerchantRules(db), [db]) ?? [];
 
@@ -210,6 +210,7 @@ export function ImportPage() {
     anchor.download = `centsible-backup-${todayIso()}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
+    await updateSettings(db, { lastBackupAt: Date.now() });
   }
 
   async function readBackupFile(event: ChangeEvent<HTMLInputElement>) {

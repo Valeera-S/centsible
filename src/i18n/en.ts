@@ -1,7 +1,8 @@
-// Every user-facing string lives here so a future locale can swap the table.
-export const strings = {
+// English string table; the canonical shape every locale must satisfy.
+export const en = {
   appName: 'Centsible',
   tagline: 'Local-first expense tracker. Your money data never leaves your device.',
+  languageToggle: '中文',
   nav: {
     dashboard: 'Dashboard',
     transactions: 'Transactions',
@@ -33,6 +34,19 @@ export const strings = {
     flowIn: 'In',
     flowOut: 'Out',
     flowNet: 'Net',
+    paceRegion: 'Budget pace',
+    paceActual: 'This month',
+    paceIdeal: 'Even pace',
+    paceLastMonth: 'Last month',
+    heatmapRegion: 'Daily spending heatmap',
+    streakCurrent: 'Current no-spend streak',
+    streakLongest: 'Longest this year',
+    streakDays: (n: number) => (n === 1 ? '1 day' : `${n} days`),
+    backupReminder: (days: number | null) =>
+      days === null
+        ? 'You have never exported a backup. Your ledger lives only in this browser.'
+        : `Last backup was ${days} days ago. Export a fresh one to stay safe.`,
+    backupReminderAction: 'Go to Backup',
   },
   quickEntry: {
     placeholder: 'Quick add: "coffee 6.5", "lunch 12 yesterday", "tutoring +100"',
@@ -78,7 +92,7 @@ export const strings = {
     tabBackup: 'Backup',
     memoLabel: 'Memo text',
     memoHint:
-      'Paste your memo notes. Lines like "6月16日：Target - 104.52" become transactions; 无 and 总 lines are understood.',
+      'Paste your notes, one day per line with items separated by semicolons. The Chinese notes-app format (month-day prefixes, no-spend markers, weekly total lines) is fully understood.',
     csvLabel: 'CSV text',
     csvFileLabel: 'CSV file',
     csvHint: 'Paste or choose a credit card CSV export (Chase format).',
@@ -156,6 +170,14 @@ export const strings = {
     confirmDeleteCategory: (name: string) =>
       `Delete "${name}"? Its transactions move to the fallback category.`,
     excludedBadge: 'Not in budget',
+    storageHeading: 'Storage & backups',
+    storagePersisted:
+      'Storage is persistent: the browser will not evict this data under disk pressure.',
+    storageNotPersisted:
+      'Storage is best-effort: the browser may evict this data if the disk runs low. Installing the app usually upgrades it.',
+    storageUsage: (used: string) => `Ledger size on disk: ${used}.`,
+    lastBackup: (date: string) => `Last backup exported: ${date}.`,
+    lastBackupNever: 'No backup has ever been exported.',
     dangerHeading: 'Danger zone',
     dangerHint:
       'Wrong import or starting over? This wipes every transaction, category, rule, and setting on this device and restores the defaults. Export a backup first if anything is worth keeping.',
@@ -164,4 +186,6 @@ export const strings = {
       'Erase ALL data on this device? Every transaction, category, rule, and setting will be deleted. This cannot be undone.',
     erased: 'All data erased.',
   },
-} as const;
+};
+
+export type Strings = typeof en;

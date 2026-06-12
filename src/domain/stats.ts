@@ -100,6 +100,68 @@ export function categoryBreakdown(
     .sort((a, b) => b.totalCents - a.totalCents);
 }
 
+/**
+ * Running total of budget-relevant spending (excluded categories skipped,
+ * refunds netted) for each day of the month; index 0 is the 1st.
+ */
+export function cumulativeDailySpend(
+  transactions: readonly StatsTransaction[],
+  year: number,
+  month: number,
+  excludedCategoryIds: ReadonlySet<string>,
+): number[] {
+  const totalDays = daysInMonth(year, month);
+  const perDay = new Array<number>(totalDays).fill(0);
+  const key = monthKey(isoDate(year, month, 1));
+  for (const t of transactions) {
+    if (t.type !== 'expense' || excludedCategoryIds.has(t.categoryId)) continue;
+    if (monthKey(t.date) !== key) continue;
+    const day = Number(t.date.slice(8));
+    perDay[day - 1] += t.amountCents;
+  }
+  let running = 0;
+  return perDay.map((cents) => (running += cents));
+}
+
+/** Net expense cents per day with any spending, excluded categories skipped. */
+export function dailyExpenseMap(
+  transactions: readonly StatsTransaction[],
+  range: DateRange,
+  excludedCategoryIds: ReadonlySet<string>,
+): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const t of transactions) {
+    if (t.type !== 'expense' || excludedCategoryIds.has(t.categoryId)) continue;
+    if (!inRange(t.date, range)) continue;
+    totals.set(t.date, (totals.get(t.date) ?? 0) + t.amountCents);
+  }
+  for (const [date, cents] of totals) {
+    if (cents <= 0) totals.delete(date);
+  }
+  return totals;
+}
+
+export interface StreakSummary {
+  /** No-spend days counting back from the end of the range. */
+  current: number;
+  /** Longest run of consecutive no-spend days within the range. */
+  longest: number;
+}
+
+export function noSpendStreaks(spendDays: ReadonlySet<string>, range: DateRange): StreakSummary {
+  let longest = 0;
+  let run = 0;
+  for (let date = range.from; date <= range.to; date = addDays(date, 1)) {
+    if (spendDays.has(date)) {
+      run = 0;
+    } else {
+      run += 1;
+      if (run > longest) longest = run;
+    }
+  }
+  return { current: run, longest };
+}
+
 export interface TrendBucket {
   /** ISO date for daily buckets, yyyy-mm for monthly buckets. */
   key: string;

@@ -11,6 +11,7 @@ import {
   listRecurringRules,
   listTransactions,
   seedDefaults,
+  updateSettings,
 } from '../../db/repo';
 import { SettingsPage } from './SettingsPage';
 
@@ -102,6 +103,40 @@ describe('SettingsPage', () => {
     renderPage();
     const otherRow = await findCategoryRow('Other');
     expect(within(otherRow).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsPage storage panel', () => {
+  it('shows persistence status, usage, and last backup date', async () => {
+    Object.defineProperty(window.navigator, 'storage', {
+      configurable: true,
+      value: {
+        persisted: async () => true,
+        persist: async () => true,
+        estimate: async () => ({ usage: 2_500_000 }),
+      },
+    });
+    await updateSettings(db, { lastBackupAt: Date.UTC(2026, 5, 1) });
+    renderPage();
+
+    expect(await screen.findByText(/Storage is persistent/)).toBeInTheDocument();
+    expect(await screen.findByText(/2\.4 MB/)).toBeInTheDocument();
+    expect(await screen.findByText(/Last backup exported: 2026-06-01/)).toBeInTheDocument();
+  });
+
+  it('warns when storage is best-effort and no backup exists', async () => {
+    Object.defineProperty(window.navigator, 'storage', {
+      configurable: true,
+      value: {
+        persisted: async () => false,
+        persist: async () => false,
+        estimate: async () => ({ usage: 1024 }),
+      },
+    });
+    renderPage();
+
+    expect(await screen.findByText(/Storage is best-effort/)).toBeInTheDocument();
+    expect(await screen.findByText('No backup has ever been exported.')).toBeInTheDocument();
   });
 });
 

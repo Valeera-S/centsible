@@ -780,6 +780,38 @@ label {
   margin-top: 1.5rem;
 }
 
+.backup-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.2rem;
+  border: 1px solid var(--accent-amber);
+  border-left-width: 4px;
+  border-radius: 3px;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.85rem;
+  background: rgba(192, 131, 39, 0.08);
+}
+
+.backup-banner a {
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.locale-toggle {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+}
+
+.storage-section {
+  margin-top: 1.5rem;
+}
+
 .danger-section {
   margin-top: 2rem;
   border-top: 1px solid var(--accent-red);
@@ -818,6 +850,70 @@ label {
 .is-listening {
   border-color: var(--accent-red);
   color: var(--accent-red);
+}
+
+/* Heatmap */
+
+.heatmap-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.streak-row {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.streak-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 11px);
+  grid-auto-columns: 11px;
+  gap: 2px;
+  width: max-content;
+}
+
+.heatmap-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--paper-deep);
+}
+
+.heatmap-cell.is-pad {
+  background: transparent;
+}
+
+.heatmap-cell.level-0 {
+  background: #cfe3cf;
+}
+
+.heatmap-cell.level-1 {
+  background: #b9c7ae;
+}
+
+.heatmap-cell.level-2 {
+  background: #8fa483;
+}
+
+.heatmap-cell.level-3 {
+  background: #5d7a55;
+}
+
+.heatmap-cell.level-4 {
+  background: #20301f;
 }
 
 /* Load reveal */

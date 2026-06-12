@@ -1,5 +1,5 @@
 // Drives the local Edge/Chrome over CDP to screenshot the running app.
-// Usage: node scripts/screenshot.mjs <url> <outfile> [width] [height] [seedDemo]
+// Usage: node scripts/screenshot.mjs <url> <outfile> [width] [height] [seed|seed-zh]
 import puppeteer from 'puppeteer-core';
 import { existsSync } from 'node:fs';
 
@@ -34,7 +34,7 @@ try {
   page.on('pageerror', (err) => console.log('[pageerror]', err.message));
   await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
 
-  if (seedDemo === 'seed') {
+  if (seedDemo === 'seed' || seedDemo === 'seed-zh') {
     // Demo data: enough variety to exercise ring, donut, and trend.
     await page.evaluate(async () => {
       const today = new Date();
@@ -89,6 +89,25 @@ try {
         tx.onerror = () => reject(tx.error);
       });
     });
+    if (seedDemo === 'seed-zh') {
+      await page.evaluate(async () => {
+        const open = indexedDB.open('centsible');
+        const db = await new Promise((resolve, reject) => {
+          open.onsuccess = () => resolve(open.result);
+          open.onerror = () => reject(open.error);
+        });
+        const tx = db.transaction('settings', 'readwrite');
+        const store = tx.objectStore('settings');
+        const current = await new Promise((resolve) => {
+          const req = store.get('singleton');
+          req.onsuccess = () => resolve(req.result);
+        });
+        store.put({ ...current, locale: 'zh' });
+        await new Promise((resolve) => {
+          tx.oncomplete = resolve;
+        });
+      });
+    }
     await page.reload({ waitUntil: 'networkidle0' });
   }
 

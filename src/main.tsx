@@ -16,6 +16,10 @@ import { todayIso } from './domain/dates';
 const db = getDb();
 const root = createRoot(document.getElementById('root')!);
 
+// Best-effort upgrade from evictable to persistent storage; browsers grant it
+// silently for installed or frequently used apps.
+navigator.storage?.persist?.().catch(() => undefined);
+
 seedDefaults(db)
   .then(() => postDueRecurring(db, todayIso()))
   .then(() => {

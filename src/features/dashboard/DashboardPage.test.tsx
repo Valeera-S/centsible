@@ -105,6 +105,47 @@ describe('DashboardPage (month view)', () => {
     expect(await screen.findByRole('region', { name: 'Monthly budget' })).toBeInTheDocument();
   });
 
+  it('shows no backup reminder for a small ledger', async () => {
+    renderPage();
+    await screen.findByRole('region', { name: 'Monthly budget' });
+    expect(screen.queryByText(/never exported a backup/)).not.toBeInTheDocument();
+  });
+
+  it('reminds about backups once the ledger has grown', async () => {
+    for (let i = 0; i < 10; i++) {
+      await addTransaction(db, {
+        type: 'expense',
+        amountCents: 100 + i,
+        categoryId: 'dining',
+        date: todayIso(),
+        note: `snack ${i}`,
+        source: 'manual',
+      });
+    }
+    renderPage();
+
+    expect(await screen.findByText(/never exported a backup/)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Go to Backup' });
+    expect(link).toHaveAttribute('href', '#/import');
+  });
+
+  it('shows the budget pace section only in month view', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('region', { name: 'Budget pace' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Year' }));
+    expect(screen.queryByRole('region', { name: 'Budget pace' })).not.toBeInTheDocument();
+  });
+
+  it('shows the heatmap with no-spend streaks', async () => {
+    renderPage();
+    const heatmap = await screen.findByRole('region', { name: 'Daily spending heatmap' });
+    expect(within(heatmap).getByText('Current no-spend streak')).toBeInTheDocument();
+    expect(within(heatmap).getByText('Longest this year')).toBeInTheDocument();
+    expect(within(heatmap).getAllByTestId('heatmap-cell').length).toBeGreaterThan(100);
+  });
+
   it('flags an over-budget month', async () => {
     await addTransaction(db, {
       type: 'expense',

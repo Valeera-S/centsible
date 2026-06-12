@@ -3,7 +3,7 @@ import { parseAmount } from '../../domain/money';
 import { todayIso } from '../../domain/dates';
 import { FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID } from '../../domain/categories';
 import type { Category, Transaction, TransactionType } from '../../domain/types';
-import { strings } from '../../i18n/strings';
+import { useStrings } from '../../i18n/localeContext';
 
 export interface TransactionFormDraft {
   type: TransactionType;
@@ -20,9 +20,8 @@ interface TransactionFormProps {
   onCancel: () => void;
 }
 
-const f = strings.transactions.form;
-
 export function TransactionForm({ categories, initial, onSave, onCancel }: TransactionFormProps) {
+  const f = useStrings().transactions.form;
   const [type, setType] = useState<TransactionType>(initial?.type ?? 'expense');
   const [amountText, setAmountText] = useState(
     initial ? (Math.abs(initial.amountCents) / 100).toFixed(2) : '',
