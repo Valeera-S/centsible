@@ -31,6 +31,12 @@ export function addDays(date: string, delta: number): string {
   return isoDate(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate());
 }
 
+/** Local calendar day; the only clock access in the domain layer. */
+export function todayIso(): string {
+  const now = new Date();
+  return isoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
 export function monthKey(date: string): string {
   return date.slice(0, 7);
 }

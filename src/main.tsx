@@ -2,9 +2,15 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
+import { getDb } from './db/db';
+import { seedDefaults } from './db/repo';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+const db = getDb();
+
+seedDefaults(db).then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App db={db} />
+    </StrictMode>,
+  );
+});

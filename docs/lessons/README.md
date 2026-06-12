@@ -20,3 +20,5 @@ Rules for this folder:
 - [anchor-tests-to-independent-truth](anchor-tests-to-independent-truth.md) - fixture
   tests need an expectation computed outside the session; decide code-vs-test before
   fixing a failure
+- [rtl-cleanup-without-globals](rtl-cleanup-without-globals.md) - without vitest
+  globals, register Testing Library cleanup in the setup file or DOM leaks across tests
