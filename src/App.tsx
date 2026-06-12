@@ -35,6 +35,9 @@ function App({ db }: AppProps) {
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>
+          <footer className="app-footer">
+            {strings.appName} v{__APP_VERSION__}
+          </footer>
         </div>
       </HashRouter>
     </DbProvider>

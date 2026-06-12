@@ -5,6 +5,7 @@ import {
   addTransaction,
   deleteCategory,
   deleteTransaction,
+  eraseAllData,
   getSettings,
   learnMerchantRule,
   listCategories,
@@ -167,6 +168,30 @@ describe('categories', () => {
 
   it('refuses to delete the fallback categories', async () => {
     await expect(deleteCategory(db, FALLBACK_EXPENSE_CATEGORY_ID)).rejects.toThrow();
+  });
+});
+
+describe('eraseAllData', () => {
+  it('wipes every table and restores the defaults', async () => {
+    await addTransaction(db, {
+      type: 'expense',
+      amountCents: 650,
+      categoryId: 'dining',
+      date: '2026-06-11',
+      note: 'coffee',
+      source: 'manual',
+    });
+    await learnMerchantRule(db, 'mystery shop', 'groceries');
+    await updateSettings(db, { monthlyBudgetCents: 12345 });
+
+    await eraseAllData(db);
+
+    expect(await listTransactions(db)).toHaveLength(0);
+    expect(await db.categories.count()).toBe(DEFAULT_CATEGORIES.length);
+    expect((await getSettings(db)).monthlyBudgetCents).toBe(60000);
+    const rules = await listMerchantRules(db);
+    expect(rules.some((r) => r.pattern === 'mystery shop')).toBe(false);
+    expect(rules.length).toBeGreaterThan(0);
   });
 });
 

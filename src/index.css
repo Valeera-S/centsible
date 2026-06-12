@@ -780,6 +780,31 @@ label {
   margin-top: 1.5rem;
 }
 
+.danger-section {
+  margin-top: 2rem;
+  border-top: 1px solid var(--accent-red);
+  padding-top: 0.6rem;
+}
+
+.danger-button {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.danger-button:hover {
+  background: rgba(177, 61, 40, 0.08);
+}
+
+.app-footer {
+  margin-top: 3rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
 .backup-warning {
   border: 1px solid var(--accent-amber);
   border-left-width: 4px;

@@ -156,5 +156,12 @@ export const strings = {
     confirmDeleteCategory: (name: string) =>
       `Delete "${name}"? Its transactions move to the fallback category.`,
     excludedBadge: 'Not in budget',
+    dangerHeading: 'Danger zone',
+    dangerHint:
+      'Wrong import or starting over? This wipes every transaction, category, rule, and setting on this device and restores the defaults. Export a backup first if anything is worth keeping.',
+    eraseButton: 'Erase all data',
+    confirmErase:
+      'Erase ALL data on this device? Every transaction, category, rule, and setting will be deleted. This cannot be undone.',
+    erased: 'All data erased.',
   },
 } as const;

@@ -5,6 +5,7 @@ import {
   addRecurringRule,
   deleteCategory,
   deleteRecurringRule,
+  eraseAllData,
   getSettings,
   listCategories,
   listRecurringRules,
@@ -43,6 +44,7 @@ export function SettingsPage() {
   const [ruleDay, setRuleDay] = useState('');
   const [ruleStart, setRuleStart] = useState(() => todayIso());
   const [ruleError, setRuleError] = useState<string | null>(null);
+  const [erased, setErased] = useState(false);
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
   const effectiveRuleCategory = expenseCategories.some((c) => c.id === ruleCategoryId)
@@ -123,6 +125,14 @@ export function SettingsPage() {
   async function stopRule(rule: RecurringRule) {
     if (window.confirm(r.confirmStop(rule.name))) {
       await deleteRecurringRule(db, rule.id);
+    }
+  }
+
+  async function eraseEverything() {
+    if (window.confirm(s.confirmErase)) {
+      await eraseAllData(db);
+      setBudgetText(null);
+      setErased(true);
     }
   }
 
@@ -286,6 +296,15 @@ export function SettingsPage() {
           {ruleError && <p role="alert">{ruleError}</p>}
           <button type="submit">{r.add}</button>
         </form>
+      </div>
+
+      <div className="danger-section">
+        <h2>{s.dangerHeading}</h2>
+        <p className="hint">{s.dangerHint}</p>
+        <button type="button" className="danger-button" onClick={eraseEverything}>
+          {s.eraseButton}
+        </button>
+        {erased && <p className="saved-note">{s.erased}</p>}
       </div>
     </section>
   );

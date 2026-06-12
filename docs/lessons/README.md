@@ -31,3 +31,6 @@ Rules for this folder:
 - [real-data-breaks-curated-fixtures](real-data-breaks-curated-fixtures.md) - the
   first full-year paste broke five format assumptions the two-week excerpt hid; the
   whole corpus is now a permanent fixture with per-block checksums
+- [stale-pwa-tab-needs-version-visibility](stale-pwa-tab-needs-version-visibility.md) -
+  an open tab ran the pre-fix build and re-imported bad data; footer version, an
+  erase-all-data button, and checking version skew before reopening "fixed" bugs

@@ -276,6 +276,24 @@ export async function importBackup(db: CentsibleDb, backup: BackupV1): Promise<I
   );
 }
 
+/** Deletes everything on this device and restores factory defaults. */
+export async function eraseAllData(db: CentsibleDb): Promise<void> {
+  await db.transaction(
+    'rw',
+    [db.transactions, db.categories, db.recurringRules, db.merchantRules, db.settings],
+    async () => {
+      await Promise.all([
+        db.transactions.clear(),
+        db.categories.clear(),
+        db.recurringRules.clear(),
+        db.merchantRules.clear(),
+        db.settings.clear(),
+      ]);
+    },
+  );
+  await seedDefaults(db);
+}
+
 export async function listMerchantRules(db: CentsibleDb): Promise<MerchantRule[]> {
   return db.merchantRules.toArray();
 }

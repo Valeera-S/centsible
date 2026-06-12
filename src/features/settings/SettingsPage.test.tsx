@@ -4,7 +4,14 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DbProvider } from '../../db/DbProvider';
 import { createDb, type CentsibleDb } from '../../db/db';
-import { getSettings, listCategories, listRecurringRules, seedDefaults } from '../../db/repo';
+import {
+  addTransaction,
+  getSettings,
+  listCategories,
+  listRecurringRules,
+  listTransactions,
+  seedDefaults,
+} from '../../db/repo';
 import { SettingsPage } from './SettingsPage';
 
 let db: CentsibleDb;
@@ -95,6 +102,45 @@ describe('SettingsPage', () => {
     renderPage();
     const otherRow = await findCategoryRow('Other');
     expect(within(otherRow).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsPage danger zone', () => {
+  it('erases all data after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await addTransaction(db, {
+      type: 'expense',
+      amountCents: 650,
+      categoryId: 'dining',
+      date: '2026-06-11',
+      note: 'coffee',
+      source: 'manual',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Erase all data' }));
+
+    expect(await screen.findByText('All data erased.')).toBeInTheDocument();
+    expect(await listTransactions(db)).toHaveLength(0);
+  });
+
+  it('does nothing when the confirmation is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await addTransaction(db, {
+      type: 'expense',
+      amountCents: 650,
+      categoryId: 'dining',
+      date: '2026-06-11',
+      note: 'coffee',
+      source: 'manual',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Erase all data' }));
+
+    expect(await listTransactions(db)).toHaveLength(1);
   });
 });
 
