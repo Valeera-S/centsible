@@ -20,7 +20,9 @@ if (!executablePath) {
   process.exit(1);
 }
 
-const browser = await puppeteer.launch({ executablePath, headless: 'shell' });
+// Modern headless, not 'shell': the shell mode skips painting some SVG chart
+// geometry (Recharts bars exist in the DOM but never render).
+const browser = await puppeteer.launch({ executablePath, headless: true });
 try {
   const page = await browser.newPage();
   await page.setViewport({

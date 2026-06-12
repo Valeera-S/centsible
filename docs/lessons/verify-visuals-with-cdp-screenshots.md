@@ -26,3 +26,11 @@ catches the failure and renders an explicit storage-unavailable message.
 Async-mounting local-first apps need a real readiness signal before capture; raw
 headless flags give none, and on Windows Edge you cannot even see why. CDP gives
 console output, errors, and deterministic waits.
+
+## Follow-up (same day, found by the phase 3 verifier)
+
+puppeteer's `headless: 'shell'` mode silently skips painting some SVG geometry:
+Recharts bars existed in the DOM with correct positions and fills but rendered as
+blank space. `headless: true` (modern headless) paints them correctly - the script
+now uses that. When a screenshot looks wrong, diff the DOM against the pixels before
+blaming the app.
