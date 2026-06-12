@@ -10,12 +10,14 @@ import '@fontsource/ibm-plex-mono/600.css';
 import './index.css';
 import App from './App.tsx';
 import { getDb } from './db/db';
-import { seedDefaults } from './db/repo';
+import { postDueRecurring, seedDefaults } from './db/repo';
+import { todayIso } from './domain/dates';
 
 const db = getDb();
 const root = createRoot(document.getElementById('root')!);
 
 seedDefaults(db)
+  .then(() => postDueRecurring(db, todayIso()))
   .then(() => {
     root.render(
       <StrictMode>

@@ -178,6 +178,9 @@ export function TransactionsPage() {
                     style={{ backgroundColor: category?.color ?? '#888888' }}
                   />
                   <span className="tx-note">{transaction.note || transaction.merchant || ''}</span>
+                  {transaction.source === 'recurring' && (
+                    <span className="badge">{t.autoBadge}</span>
+                  )}
                   <span className="tx-category">{category?.name ?? transaction.categoryId}</span>
                   <span className={`tx-amount tx-${transaction.type}`}>
                     {displayAmount(transaction)}

@@ -694,6 +694,97 @@ label {
   max-width: 20rem;
 }
 
+/* Import page */
+
+.tab-bar {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.tab-bar button {
+  border: none;
+  border-radius: 0;
+}
+
+.tab-bar button + button {
+  border-left: 1px solid var(--rule-strong);
+}
+
+.tab-bar button.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.import-pane {
+  max-width: 40rem;
+}
+
+.import-pane textarea {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.hint {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.import-preview {
+  margin-top: 1.5rem;
+}
+
+.import-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.9rem;
+}
+
+.import-preview th {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 2px solid var(--rule-strong);
+}
+
+.import-preview td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.88rem;
+}
+
+.import-preview tr.is-excluded td {
+  opacity: 0.45;
+}
+
+.cell-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.recurring-section {
+  margin-top: 1.5rem;
+}
+
+.is-listening {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
 /* Load reveal */
 
 @keyframes rise {

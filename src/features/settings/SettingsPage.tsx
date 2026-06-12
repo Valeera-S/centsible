@@ -2,18 +2,23 @@ import { useState, type FormEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDb } from '../../db/dbContext';
 import {
+  addRecurringRule,
+  deleteCategory,
+  deleteRecurringRule,
   getSettings,
   listCategories,
-  deleteCategory,
-  upsertCategory,
+  listRecurringRules,
   updateSettings,
+  upsertCategory,
 } from '../../db/repo';
 import { FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID } from '../../domain/categories';
-import { parseAmount } from '../../domain/money';
-import type { Category, TransactionType } from '../../domain/types';
+import { todayIso } from '../../domain/dates';
+import { formatCents, parseAmount } from '../../domain/money';
+import type { Category, RecurringRule, TransactionType } from '../../domain/types';
 import { strings } from '../../i18n/strings';
 
 const s = strings.settings;
+const r = strings.recurring;
 const FALLBACK_IDS = new Set([FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID]);
 const NEW_CATEGORY_DEFAULT_COLOR = '#6b7280';
 
@@ -21,6 +26,7 @@ export function SettingsPage() {
   const db = useDb();
   const settings = useLiveQuery(() => getSettings(db), [db]);
   const categories = useLiveQuery(() => listCategories(db), [db]) ?? [];
+  const recurringRules = useLiveQuery(() => listRecurringRules(db), [db]) ?? [];
 
   const [budgetText, setBudgetText] = useState<string | null>(null);
   const [budgetError, setBudgetError] = useState<string | null>(null);
@@ -29,6 +35,19 @@ export function SettingsPage() {
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState<TransactionType>('expense');
   const [newColor, setNewColor] = useState(NEW_CATEGORY_DEFAULT_COLOR);
+
+  const [ruleName, setRuleName] = useState('');
+  const [ruleAmount, setRuleAmount] = useState('');
+  const [ruleCategoryId, setRuleCategoryId] = useState('');
+  const [ruleInterval, setRuleInterval] = useState<RecurringRule['interval']>('monthly');
+  const [ruleDay, setRuleDay] = useState('');
+  const [ruleStart, setRuleStart] = useState(() => todayIso());
+  const [ruleError, setRuleError] = useState<string | null>(null);
+
+  const expenseCategories = categories.filter((c) => c.type === 'expense');
+  const effectiveRuleCategory = expenseCategories.some((c) => c.id === ruleCategoryId)
+    ? ruleCategoryId
+    : (expenseCategories[0]?.id ?? FALLBACK_EXPENSE_CATEGORY_ID);
 
   const budgetValue =
     budgetText ?? (settings ? (settings.monthlyBudgetCents / 100).toFixed(2) : '');
@@ -67,6 +86,43 @@ export function SettingsPage() {
   async function removeCategory(category: Category) {
     if (window.confirm(s.confirmDeleteCategory(category.name))) {
       await deleteCategory(db, category.id);
+    }
+  }
+
+  async function addRule(event: FormEvent) {
+    event.preventDefault();
+    const amountCents = parseAmount(ruleAmount);
+    const day = Number(ruleDay);
+    const name = ruleName.trim();
+    if (
+      !name ||
+      amountCents === null ||
+      amountCents <= 0 ||
+      !Number.isInteger(day) ||
+      day < 1 ||
+      day > 31
+    ) {
+      setRuleError(r.amountInvalid);
+      return;
+    }
+    await addRecurringRule(db, {
+      name,
+      amountCents,
+      type: 'expense',
+      categoryId: effectiveRuleCategory,
+      interval: ruleInterval,
+      dayOfMonth: day,
+      startDate: ruleStart,
+    });
+    setRuleName('');
+    setRuleAmount('');
+    setRuleDay('');
+    setRuleError(null);
+  }
+
+  async function stopRule(rule: RecurringRule) {
+    if (window.confirm(r.confirmStop(rule.name))) {
+      await deleteRecurringRule(db, rule.id);
     }
   }
 
@@ -147,6 +203,88 @@ export function SettingsPage() {
             onChange={(event) => setNewColor(event.target.value)}
           />
           <button type="submit">{s.addCategory}</button>
+        </form>
+      </div>
+
+      <div className="recurring-section">
+        <h2>{r.heading}</h2>
+        <p className="hint">{r.hint}</p>
+        <ul>
+          {recurringRules.map((rule) => (
+            <li key={rule.id} className="category-row">
+              <span>{rule.name}</span>
+              <span className="tx-amount">{formatCents(rule.amountCents)}</span>
+              <span className="tx-category">
+                {r.every(rule.interval === 'monthly' ? r.monthly : r.yearly, rule.dayOfMonth)}
+              </span>
+              <button type="button" onClick={() => stopRule(rule)}>
+                {r.stop}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <form onSubmit={addRule} className="add-category-form">
+          <label htmlFor="rule-name">{r.name}</label>
+          <input
+            id="rule-name"
+            type="text"
+            value={ruleName}
+            onChange={(event) => setRuleName(event.target.value)}
+          />
+          <label htmlFor="rule-amount">{r.amount}</label>
+          <input
+            id="rule-amount"
+            type="text"
+            inputMode="decimal"
+            value={ruleAmount}
+            onChange={(event) => {
+              setRuleAmount(event.target.value);
+              setRuleError(null);
+            }}
+          />
+          <label htmlFor="rule-category">{r.category}</label>
+          <select
+            id="rule-category"
+            value={effectiveRuleCategory}
+            onChange={(event) => setRuleCategoryId(event.target.value)}
+          >
+            {expenseCategories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="rule-interval">{r.interval}</label>
+          <select
+            id="rule-interval"
+            value={ruleInterval}
+            onChange={(event) => setRuleInterval(event.target.value as RecurringRule['interval'])}
+          >
+            <option value="monthly">{r.monthly}</option>
+            <option value="yearly">{r.yearly}</option>
+          </select>
+          <label htmlFor="rule-day">{r.dayOfMonth}</label>
+          <input
+            id="rule-day"
+            type="number"
+            min={1}
+            max={31}
+            value={ruleDay}
+            onChange={(event) => {
+              setRuleDay(event.target.value);
+              setRuleError(null);
+            }}
+          />
+          <label htmlFor="rule-start">{r.startDate}</label>
+          <input
+            id="rule-start"
+            type="date"
+            value={ruleStart}
+            onChange={(event) => setRuleStart(event.target.value)}
+          />
+          {ruleError && <p role="alert">{ruleError}</p>}
+          <button type="submit">{r.add}</button>
         </form>
       </div>
     </section>

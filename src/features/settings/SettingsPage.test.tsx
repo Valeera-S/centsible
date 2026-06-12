@@ -4,7 +4,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DbProvider } from '../../db/DbProvider';
 import { createDb, type CentsibleDb } from '../../db/db';
-import { getSettings, listCategories, seedDefaults } from '../../db/repo';
+import { getSettings, listCategories, listRecurringRules, seedDefaults } from '../../db/repo';
 import { SettingsPage } from './SettingsPage';
 
 let db: CentsibleDb;
@@ -25,6 +25,14 @@ function renderPage() {
       <SettingsPage />
     </DbProvider>,
   );
+}
+
+/** Category names also appear as select options; target the list row. */
+async function findCategoryRow(name: string): Promise<HTMLElement> {
+  const matches = await screen.findAllByText(name);
+  const row = matches.map((el) => el.closest('li')).find((li) => li !== null);
+  if (!row) throw new Error(`No category row for ${name}`);
+  return row;
 }
 
 describe('SettingsPage', () => {
@@ -62,7 +70,8 @@ describe('SettingsPage', () => {
     await user.type(await screen.findByLabelText('Name'), 'Pets');
     await user.click(screen.getByRole('button', { name: 'Add category' }));
 
-    expect(await screen.findByText('Pets')).toBeInTheDocument();
+    const row = await findCategoryRow('Pets');
+    expect(row).toBeInTheDocument();
     const categories = await listCategories(db);
     expect(categories.some((c) => c.name === 'Pets' && c.type === 'expense')).toBe(true);
   });
@@ -74,8 +83,7 @@ describe('SettingsPage', () => {
 
     await user.type(await screen.findByLabelText('Name'), 'Pets');
     await user.click(screen.getByRole('button', { name: 'Add category' }));
-    const row = (await screen.findByText('Pets')).closest('li');
-    if (!row) throw new Error('row not found');
+    const row = await findCategoryRow('Pets');
     await user.click(within(row).getByRole('button', { name: 'Delete' }));
 
     await waitFor(async () => {
@@ -85,8 +93,49 @@ describe('SettingsPage', () => {
 
   it('does not offer delete for fallback categories', async () => {
     renderPage();
-    const otherRow = (await screen.findByText('Other')).closest('li');
-    if (!otherRow) throw new Error('row not found');
+    const otherRow = await findCategoryRow('Other');
     expect(within(otherRow).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsPage recurring rules', () => {
+  it('adds a recurring rule', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(await screen.findByLabelText('Rule name'), 'Spotify');
+    await user.type(screen.getByLabelText('Amount'), '9.99');
+    await user.selectOptions(screen.getByLabelText('Category'), 'entertainment');
+    await user.type(screen.getByLabelText('Day of month'), '1');
+    await user.click(screen.getByRole('button', { name: 'Add recurring' }));
+
+    expect(await screen.findByText('Spotify')).toBeInTheDocument();
+    const rules = await listRecurringRules(db);
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toMatchObject({
+      name: 'Spotify',
+      amountCents: 999,
+      categoryId: 'entertainment',
+      interval: 'monthly',
+      dayOfMonth: 1,
+    });
+  });
+
+  it('stops a rule after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(await screen.findByLabelText('Rule name'), 'Spotify');
+    await user.type(screen.getByLabelText('Amount'), '9.99');
+    await user.type(screen.getByLabelText('Day of month'), '1');
+    await user.click(screen.getByRole('button', { name: 'Add recurring' }));
+    await screen.findByText('Spotify');
+
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
+
+    await waitFor(async () => {
+      expect(await listRecurringRules(db)).toHaveLength(0);
+    });
   });
 });

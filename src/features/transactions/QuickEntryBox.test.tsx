@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QuickEntryBox } from './QuickEntryBox';
 import { todayIso } from '../../domain/dates';
@@ -41,5 +41,43 @@ describe('QuickEntryBox', () => {
     await user.type(screen.getByRole('textbox'), '{Enter}');
     expect(onCommit).not.toHaveBeenCalled();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('voice input', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('hides the mic button when speech recognition is unsupported', () => {
+    render(<QuickEntryBox onCommit={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Voice input' })).not.toBeInTheDocument();
+  });
+
+  it('fills the input with the recognized transcript', async () => {
+    class FakeRecognition {
+      lang = '';
+      interimResults = false;
+      maxAlternatives = 1;
+      onresult: ((event: { results: { transcript: string }[][] }) => void) | null = null;
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      start() {
+        queueMicrotask(() => {
+          this.onresult?.({ results: [[{ transcript: 'coffee 6.5' }]] });
+          this.onend?.();
+        });
+      }
+      stop() {}
+    }
+    vi.stubGlobal('webkitSpeechRecognition', FakeRecognition);
+
+    const user = userEvent.setup();
+    render(<QuickEntryBox onCommit={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Voice input' }));
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toHaveValue('coffee 6.5');
+    });
   });
 });

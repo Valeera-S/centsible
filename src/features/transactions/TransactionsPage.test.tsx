@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DbProvider } from '../../db/DbProvider';
 import { createDb, type CentsibleDb } from '../../db/db';
@@ -121,6 +121,22 @@ describe('TransactionsPage', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Previous month' }));
     expect(await screen.findByText('old dinner')).toBeInTheDocument();
+  });
+
+  it('marks recurring-posted transactions with an Auto badge', async () => {
+    await addTransaction(db, {
+      type: 'expense',
+      amountCents: 999,
+      categoryId: 'entertainment',
+      date: todayIso(),
+      note: 'Spotify',
+      source: 'recurring',
+      recurringId: 'some-rule',
+    });
+    renderPage();
+
+    const row = (await screen.findByText('Spotify')).closest('li');
+    expect(within(row as HTMLElement).getByText('Auto')).toBeInTheDocument();
   });
 
   it('edits a transaction through the form', async () => {

@@ -3,8 +3,10 @@ import {
   FALLBACK_EXPENSE_CATEGORY_ID,
   FALLBACK_INCOME_CATEGORY_ID,
 } from '../domain/categories';
+import { createBackup, mergeById, type BackupV1, type MergeResult } from '../domain/importMerge';
 import { SEED_MERCHANT_RULES } from '../domain/merchantMap';
-import type { Category, MerchantRule, Settings, Transaction } from '../domain/types';
+import { dueOccurrences, periodKeyOf } from '../domain/recurring';
+import type { Category, MerchantRule, RecurringRule, Settings, Transaction } from '../domain/types';
 import { monthKey } from '../domain/dates';
 import type { CentsibleDb, SettingsRow } from './db';
 
@@ -133,6 +135,139 @@ export async function getSettings(db: CentsibleDb): Promise<Settings> {
 export async function updateSettings(db: CentsibleDb, patch: Partial<Settings>): Promise<void> {
   const current = (await db.settings.get(SETTINGS_ID)) ?? DEFAULT_SETTINGS;
   await db.settings.put({ ...current, ...patch, id: SETTINGS_ID });
+}
+
+export type RecurringRuleDraft = Omit<
+  RecurringRule,
+  'id' | 'createdAt' | 'updatedAt' | 'lastPostedPeriod'
+>;
+
+export async function addRecurringRule(
+  db: CentsibleDb,
+  draft: RecurringRuleDraft,
+): Promise<RecurringRule> {
+  const now = Date.now();
+  const rule: RecurringRule = { ...draft, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
+  await db.recurringRules.add(rule);
+  return rule;
+}
+
+export async function updateRecurringRule(
+  db: CentsibleDb,
+  id: string,
+  patch: Partial<RecurringRuleDraft>,
+): Promise<void> {
+  await db.recurringRules.update(id, { ...patch, updatedAt: Date.now() });
+}
+
+export async function deleteRecurringRule(db: CentsibleDb, id: string): Promise<void> {
+  await db.recurringRules.delete(id);
+}
+
+export async function listRecurringRules(db: CentsibleDb): Promise<RecurringRule[]> {
+  const rules = await db.recurringRules.toArray();
+  return rules.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Posts every due occurrence of every rule up to `today` and advances each
+ * rule's lastPostedPeriod, all in one transaction so reposting is impossible
+ * even if the app opens twice. Returns the number of transactions created.
+ */
+export async function postDueRecurring(db: CentsibleDb, today: string): Promise<number> {
+  return db.transaction('rw', [db.recurringRules, db.transactions], async () => {
+    let posted = 0;
+    const rules = await db.recurringRules.toArray();
+    for (const rule of rules) {
+      const due = dueOccurrences(rule, today);
+      if (due.length === 0) continue;
+      const now = Date.now();
+      for (const date of due) {
+        await db.transactions.add({
+          id: crypto.randomUUID(),
+          type: rule.type,
+          amountCents: rule.amountCents,
+          categoryId: rule.categoryId,
+          date,
+          note: rule.name,
+          source: 'recurring',
+          recurringId: rule.id,
+          createdAt: now,
+          updatedAt: now,
+        });
+        posted += 1;
+      }
+      await db.recurringRules.update(rule.id, {
+        lastPostedPeriod: periodKeyOf(due[due.length - 1], rule.interval),
+        updatedAt: now,
+      });
+    }
+    return posted;
+  });
+}
+
+export async function exportBackup(db: CentsibleDb): Promise<BackupV1> {
+  const [transactions, categories, recurringRules, merchantRules, settings] = await Promise.all([
+    db.transactions.toArray(),
+    db.categories.toArray(),
+    db.recurringRules.toArray(),
+    db.merchantRules.toArray(),
+    getSettings(db),
+  ]);
+  return createBackup({
+    exportedAt: Date.now(),
+    transactions,
+    categories,
+    recurringRules,
+    merchantRules,
+    settings: { monthlyBudgetCents: settings.monthlyBudgetCents, currency: settings.currency },
+  });
+}
+
+export interface ImportStats {
+  transactions: Omit<MergeResult<Transaction>, 'merged'>;
+  recurringRules: Omit<MergeResult<RecurringRule>, 'merged'>;
+  merchantRules: Omit<MergeResult<MerchantRule>, 'merged'>;
+  categories: { added: number };
+}
+
+const dropMerged = <T>({ added, updated, unchanged }: MergeResult<T>) => ({
+  added,
+  updated,
+  unchanged,
+});
+
+/**
+ * Folds a backup into this database: id-based last-write-wins for
+ * transactions, recurring rules, and merchant rules; add-only for categories
+ * (local definitions win); local settings are kept untouched.
+ */
+export async function importBackup(db: CentsibleDb, backup: BackupV1): Promise<ImportStats> {
+  return db.transaction(
+    'rw',
+    [db.transactions, db.categories, db.recurringRules, db.merchantRules],
+    async () => {
+      const txMerge = mergeById(await db.transactions.toArray(), backup.transactions);
+      await db.transactions.bulkPut(txMerge.merged);
+
+      const ruleMerge = mergeById(await db.recurringRules.toArray(), backup.recurringRules);
+      await db.recurringRules.bulkPut(ruleMerge.merged);
+
+      const merchantMerge = mergeById(await db.merchantRules.toArray(), backup.merchantRules);
+      await db.merchantRules.bulkPut(merchantMerge.merged);
+
+      const existingIds = new Set((await db.categories.toArray()).map((c) => c.id));
+      const newCategories = backup.categories.filter((c) => !existingIds.has(c.id));
+      await db.categories.bulkAdd(newCategories);
+
+      return {
+        transactions: dropMerged(txMerge),
+        recurringRules: dropMerged(ruleMerge),
+        merchantRules: dropMerged(merchantMerge),
+        categories: { added: newCategories.length },
+      };
+    },
+  );
 }
 
 export async function listMerchantRules(db: CentsibleDb): Promise<MerchantRule[]> {
