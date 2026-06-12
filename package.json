@@ -17,6 +17,9 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.2.9",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
     "dexie": "^4.4.3",
     "dexie-react-hooks": "^4.4.0",
     "react": "^19.2.6",
@@ -41,6 +44,7 @@
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.8.4",
+    "puppeteer-core": "^25.1.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",

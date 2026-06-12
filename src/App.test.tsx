@@ -20,10 +20,10 @@ afterEach(async () => {
 });
 
 describe('App', () => {
-  it('renders the dashboard by default with navigation', () => {
+  it('renders the dashboard by default with navigation', async () => {
     render(<App db={db} />);
     expect(screen.getByText('Centsible')).toBeInTheDocument();
-    expect(screen.getByText('Dashboard arrives in the next phase.')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Monthly budget' })).toBeInTheDocument();
   });
 
   it('navigates to transactions and settings', async () => {

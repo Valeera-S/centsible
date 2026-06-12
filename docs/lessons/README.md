@@ -22,3 +22,6 @@ Rules for this folder:
   fixing a failure
 - [rtl-cleanup-without-globals](rtl-cleanup-without-globals.md) - without vitest
   globals, register Testing Library cleanup in the setup file or DOM leaks across tests
+- [verify-visuals-with-cdp-screenshots](verify-visuals-with-cdp-screenshots.md) - raw
+  msedge --headless flags give blank shots and no stdout; use scripts/screenshot.mjs
+  (puppeteer-core); also surfaced the blank-page-on-storage-failure bug
