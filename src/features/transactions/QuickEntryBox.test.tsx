@@ -44,6 +44,32 @@ describe('QuickEntryBox', () => {
   });
 });
 
+describe('frequent suggestion chips', () => {
+  it('renders chips and fills the input on click', async () => {
+    const user = userEvent.setup();
+    render(
+      <QuickEntryBox
+        onCommit={vi.fn()}
+        suggestions={[
+          { description: '午餐', amountCents: 1500 },
+          { description: 'coffee', amountCents: 650 },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Fill 午餐' }));
+    expect(screen.getByRole('textbox')).toHaveValue('午餐 15');
+
+    await user.click(screen.getByRole('button', { name: 'Fill coffee' }));
+    expect(screen.getByRole('textbox')).toHaveValue('coffee 6.5');
+  });
+
+  it('renders no chip row without suggestions', () => {
+    render(<QuickEntryBox onCommit={vi.fn()} />);
+    expect(screen.queryByTestId('suggestion-chips')).not.toBeInTheDocument();
+  });
+});
+
 describe('voice input', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

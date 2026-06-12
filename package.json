@@ -2,7 +2,7 @@
   "name": "centsible",
   "description": "Local-first expense tracker PWA. Your money data never leaves your device.",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "license": "MIT",
   "type": "module",
   "scripts": {

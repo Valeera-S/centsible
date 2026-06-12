@@ -20,6 +20,7 @@ import { suggestCategory } from '../../domain/merchantMap';
 import { parseChaseCsv } from '../../domain/parse/chaseCsv';
 import { parseMemo } from '../../domain/parse/memo';
 import type { Transaction, TransactionSource } from '../../domain/types';
+import { categoryDisplayName } from '../../i18n/categoryNames';
 import { useStrings } from '../../i18n/localeContext';
 
 type Tab = 'memo' | 'csv' | 'backup';
@@ -45,7 +46,8 @@ interface ParseOutcome {
 
 export function ImportPage() {
   const db = useDb();
-  const s = useStrings().importPage;
+  const strings = useStrings();
+  const s = strings.importPage;
   const categories = useLiveQuery(() => listCategories(db), [db]) ?? [];
   const merchantRules = useLiveQuery(() => listMerchantRules(db), [db]) ?? [];
 
@@ -364,7 +366,7 @@ export function ImportPage() {
                     >
                       {expenseCategories.map((category) => (
                         <option key={category.id} value={category.id}>
-                          {category.name}
+                          {categoryDisplayName(category, strings)}
                         </option>
                       ))}
                     </select>

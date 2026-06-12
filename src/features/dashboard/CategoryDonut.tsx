@@ -1,6 +1,8 @@
 import { formatCents } from '../../domain/money';
 import type { CategoryTotal } from '../../domain/stats';
 import type { Category } from '../../domain/types';
+import { categoryDisplayName } from '../../i18n/categoryNames';
+import { useStrings } from '../../i18n/localeContext';
 
 const SIZE = 200;
 const STROKE = 26;
@@ -16,6 +18,7 @@ interface CategoryDonutProps {
 
 /** Donut of positive category totals plus a ranked list with proportional bars. */
 export function CategoryDonut({ totals, categories, totalCents }: CategoryDonutProps) {
+  const strings = useStrings();
   const positive = totals.filter((t) => t.totalCents > 0);
   const sum = positive.reduce((acc, t) => acc + t.totalCents, 0);
   const max = positive.length > 0 ? positive[0].totalCents : 0;
@@ -66,7 +69,7 @@ export function CategoryDonut({ totals, categories, totalCents }: CategoryDonutP
                 style={{ backgroundColor: category?.color ?? '#a39e93' }}
               />
               <span className="rank-name" data-testid="category-name">
-                {category?.name ?? t.categoryId}
+                {category ? categoryDisplayName(category, strings) : t.categoryId}
               </span>
               <span className="rank-bar">
                 <span className="rank-bar-fill" style={{ width: `${share * 100}%` }} />

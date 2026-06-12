@@ -16,6 +16,7 @@ import { FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID } from '../..
 import { todayIso } from '../../domain/dates';
 import { formatCents, parseAmount } from '../../domain/money';
 import type { Category, RecurringRule, TransactionType } from '../../domain/types';
+import { categoryDisplayName } from '../../i18n/categoryNames';
 import { useStrings } from '../../i18n/localeContext';
 
 const FALLBACK_IDS = new Set([FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID]);
@@ -116,7 +117,7 @@ export function SettingsPage() {
   }
 
   async function removeCategory(category: Category) {
-    if (window.confirm(s.confirmDeleteCategory(category.name))) {
+    if (window.confirm(s.confirmDeleteCategory(categoryDisplayName(category, strings)))) {
       await deleteCategory(db, category.id);
     }
   }
@@ -176,7 +177,7 @@ export function SettingsPage() {
             .map((category) => (
               <li key={category.id} className="category-row">
                 <span className="category-dot" style={{ backgroundColor: category.color }} />
-                <span>{category.name}</span>
+                <span>{categoryDisplayName(category, strings)}</span>
                 {category.excludeFromBudget && <span className="badge">{s.excludedBadge}</span>}
                 {!FALLBACK_IDS.has(category.id) && (
                   <button type="button" onClick={() => removeCategory(category)}>
@@ -291,7 +292,7 @@ export function SettingsPage() {
           >
             {expenseCategories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name}
+                {categoryDisplayName(category, strings)}
               </option>
             ))}
           </select>

@@ -11,10 +11,12 @@ import {
 } from '../../db/repo';
 import { FALLBACK_EXPENSE_CATEGORY_ID, FALLBACK_INCOME_CATEGORY_ID } from '../../domain/categories';
 import { monthKey, todayIso } from '../../domain/dates';
+import { frequentEntries } from '../../domain/frequentEntries';
 import { formatCents } from '../../domain/money';
 import { suggestCategory } from '../../domain/merchantMap';
 import type { QuickEntryItem } from '../../domain/parse/quickEntry';
 import type { Category, Transaction } from '../../domain/types';
+import { categoryDisplayName } from '../../i18n/categoryNames';
 import { useStrings } from '../../i18n/localeContext';
 import { QuickEntryBox } from './QuickEntryBox';
 import { TransactionForm, type TransactionFormDraft } from './TransactionForm';
@@ -48,7 +50,8 @@ function dateLabel(date: string): string {
 
 export function TransactionsPage() {
   const db = useDb();
-  const t = useStrings().transactions;
+  const strings = useStrings();
+  const t = strings.transactions;
   const [month, setMonth] = useState(() => monthKey(todayIso()));
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -71,6 +74,8 @@ export function TransactionsPage() {
     ) ?? [];
 
   const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const allTransactions = useLiveQuery(() => db.transactions.toArray(), [db]) ?? [];
+  const suggestions = frequentEntries(allTransactions, todayIso());
 
   async function commitQuickEntries(items: QuickEntryItem[]) {
     for (const item of items) {
@@ -117,7 +122,7 @@ export function TransactionsPage() {
   return (
     <section className="transactions-page">
       <h1>{t.title}</h1>
-      <QuickEntryBox onCommit={commitQuickEntries} />
+      <QuickEntryBox onCommit={commitQuickEntries} suggestions={suggestions} />
 
       <div className="month-nav">
         <button type="button" onClick={() => setMonth(shiftMonth(month, -1))}>
@@ -147,7 +152,7 @@ export function TransactionsPage() {
           <option value="all">{t.filterAllCategories}</option>
           {categories.map((category: Category) => (
             <option key={category.id} value={category.id}>
-              {category.name}
+              {categoryDisplayName(category, strings)}
             </option>
           ))}
         </select>
@@ -180,7 +185,9 @@ export function TransactionsPage() {
                   {transaction.source === 'recurring' && (
                     <span className="badge">{t.autoBadge}</span>
                   )}
-                  <span className="tx-category">{category?.name ?? transaction.categoryId}</span>
+                  <span className="tx-category">
+                    {category ? categoryDisplayName(category, strings) : transaction.categoryId}
+                  </span>
                   <span className={`tx-amount tx-${transaction.type}`}>
                     {displayAmount(transaction)}
                   </span>

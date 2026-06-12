@@ -6,6 +6,7 @@ import type { CentsibleDb } from './db/db';
 import { getSettings, updateSettings } from './db/repo';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ImportPage } from './features/import/ImportPage';
+import { ReviewPage } from './features/review/ReviewPage';
 import { TransactionsPage } from './features/transactions/TransactionsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { LocaleContext, STRING_TABLES, type Locale } from './i18n/localeContext';
@@ -31,6 +32,7 @@ function AppShell() {
                 {strings.nav.dashboard}
               </NavLink>
               <NavLink to="/transactions">{strings.nav.transactions}</NavLink>
+              <NavLink to="/review">{strings.nav.review}</NavLink>
               <NavLink to="/import">{strings.nav.importData}</NavLink>
               <NavLink to="/settings">{strings.nav.settings}</NavLink>
               <button type="button" className="locale-toggle" onClick={toggleLocale}>
@@ -42,6 +44,7 @@ function AppShell() {
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/review" element={<ReviewPage />} />
               <Route path="/import" element={<ImportPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>

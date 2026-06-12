@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { todayIso } from '../../domain/dates';
+import { formatCents } from '../../domain/money';
 import {
   parseQuickEntry,
   type QuickEntryError,
@@ -7,9 +8,11 @@ import {
 } from '../../domain/parse/quickEntry';
 import { useStrings } from '../../i18n/localeContext';
 import type { Strings } from '../../i18n/en';
+import type { FrequentEntry } from '../../domain/frequentEntries';
 
 interface QuickEntryBoxProps {
   onCommit: (items: QuickEntryItem[]) => Promise<void> | void;
+  suggestions?: FrequentEntry[];
 }
 
 interface SpeechRecognitionLike {
@@ -43,7 +46,7 @@ function errorMessage(error: QuickEntryError, strings: Strings): string {
   }
 }
 
-export function QuickEntryBox({ onCommit }: QuickEntryBoxProps) {
+export function QuickEntryBox({ onCommit, suggestions }: QuickEntryBoxProps) {
   const strings = useStrings();
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<QuickEntryError[]>([]);
@@ -111,6 +114,24 @@ export function QuickEntryBox({ onCommit }: QuickEntryBoxProps) {
         <div role="alert" className="quick-entry-errors">
           {errors.map((error) => (
             <p key={error.segment + error.reason}>{errorMessage(error, strings)}</p>
+          ))}
+        </div>
+      )}
+      {suggestions && suggestions.length > 0 && (
+        <div className="suggestion-chips" data-testid="suggestion-chips">
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion.description}
+              type="button"
+              className="chip"
+              aria-label={strings.quickEntry.fillSuggestion(suggestion.description)}
+              onClick={() => {
+                setText(`${suggestion.description} ${suggestion.amountCents / 100}`);
+                setErrors([]);
+              }}
+            >
+              {suggestion.description} {formatCents(suggestion.amountCents)}
+            </button>
           ))}
         </div>
       )}
