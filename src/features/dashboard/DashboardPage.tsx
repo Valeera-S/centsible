@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDb } from '../../db/dbContext';
 import { getSettings, listCategories } from '../../db/repo';
@@ -16,7 +16,12 @@ import {
 import { strings } from '../../i18n/strings';
 import { BudgetRing } from './BudgetRing';
 import { CategoryDonut } from './CategoryDonut';
-import { TrendChart } from './TrendChart';
+
+// Recharts is the heaviest dependency; loading it lazily keeps the initial
+// bundle (and first paint) lean while the service worker caches the chunk.
+const TrendChart = lazy(() =>
+  import('./TrendChart').then((module) => ({ default: module.TrendChart })),
+);
 
 const d = strings.dashboard;
 const MONTH_NAMES = [
@@ -185,7 +190,9 @@ export function DashboardPage() {
 
       <section className="ledger-section reveal" aria-label={d.trendRegion}>
         <h2 className="section-label">{d.trendRegion}</h2>
-        <TrendChart buckets={buckets} period={period} />
+        <Suspense fallback={<div className="trend-chart" aria-hidden="true" />}>
+          <TrendChart buckets={buckets} period={period} />
+        </Suspense>
       </section>
     </div>
   );
