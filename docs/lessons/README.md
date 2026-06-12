@@ -25,3 +25,6 @@ Rules for this folder:
 - [verify-visuals-with-cdp-screenshots](verify-visuals-with-cdp-screenshots.md) - raw
   msedge --headless flags give blank shots and no stdout; use scripts/screenshot.mjs
   (puppeteer-core); also surfaced the blank-page-on-storage-failure bug
+- [unique-labels-per-page](unique-labels-per-page.md) - duplicate label text across
+  forms on one page breaks both accessibility and tests; fix markup first, then scope
+  queries to rows
