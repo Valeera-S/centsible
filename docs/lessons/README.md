@@ -17,3 +17,6 @@ Rules for this folder:
   transaction capture was dropped and what replaced it
 - [npm-create-arg-forwarding](npm-create-arg-forwarding.md) - npm silently drops flags
   after `--` (create and run scripts alike); invoke tools via npx and verify flags took
+- [anchor-tests-to-independent-truth](anchor-tests-to-independent-truth.md) - fixture
+  tests need an expectation computed outside the session; decide code-vs-test before
+  fixing a failure
