@@ -49,7 +49,7 @@ describe('ImportPage memo flow', () => {
     await user.click(screen.getByRole('button', { name: 'Parse' }));
 
     expect(await screen.findByText('Preview')).toBeInTheDocument();
-    expect(screen.getByText(/match the memo subtotals exactly/)).toBeInTheDocument();
+    expect(screen.getByText(/Checksum: .*match.* exactly/)).toBeInTheDocument();
 
     const targetCategory = screen.getByLabelText('Category for Target') as HTMLSelectElement;
     expect(targetCategory.value).toBe('shopping');
@@ -87,6 +87,16 @@ describe('ImportPage memo flow', () => {
     await user.click(screen.getByRole('button', { name: 'Import 2 transactions' }));
     await screen.findByText('Imported 2 transactions.');
     expect(await listTransactions(db)).toHaveLength(3);
+  });
+
+  it('warns when a block does not reconcile with its subtotal line', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText('Memo text'), '6月3日：lunch - 12\n总：99');
+    await user.click(screen.getByRole('button', { name: 'Parse' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('but that block parses to $12.00');
   });
 
   it('learns a corrected category as a merchant rule', async () => {

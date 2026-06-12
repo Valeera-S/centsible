@@ -44,6 +44,26 @@ describe('seedDefaults', () => {
     expect((await getSettings(db)).monthlyBudgetCents).toBe(50000);
     expect(await db.categories.count()).toBe(DEFAULT_CATEGORIES.length);
   });
+
+  it('adds newly shipped merchant seeds to an existing database without duplicates', async () => {
+    await db.merchantRules.where('pattern').equals('打车').delete();
+    const before = await db.merchantRules.count();
+
+    await seedDefaults(db);
+
+    const rules = await db.merchantRules.toArray();
+    expect(rules.filter((r) => r.pattern === '打车')).toHaveLength(1);
+    expect(rules.length).toBe(before + 1);
+  });
+
+  it('does not overwrite a learned rule that shares a seed pattern', async () => {
+    await learnMerchantRule(db, '奶茶', 'entertainment');
+    await seedDefaults(db);
+    const rules = await db.merchantRules.toArray();
+    const matching = rules.filter((r) => r.pattern === '奶茶');
+    expect(matching).toHaveLength(1);
+    expect(matching[0].categoryId).toBe('entertainment');
+  });
 });
 
 describe('transactions', () => {

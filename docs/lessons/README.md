@@ -28,3 +28,6 @@ Rules for this folder:
 - [unique-labels-per-page](unique-labels-per-page.md) - duplicate label text across
   forms on one page breaks both accessibility and tests; fix markup first, then scope
   queries to rows
+- [real-data-breaks-curated-fixtures](real-data-breaks-curated-fixtures.md) - the
+  first full-year paste broke five format assumptions the two-week excerpt hid; the
+  whole corpus is now a permanent fixture with per-block checksums

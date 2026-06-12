@@ -130,4 +130,98 @@ describe('parseMemo edge cases', () => {
       { date: '2024-12-31', description: 'dinner', amountCents: 5000 },
     ]);
   });
+
+  it('reads a bare year line and bare month headers', () => {
+    const result = parseMemo('2025\n6月\n6月16日：Target - 104.52', { defaultYear: 2026 });
+    expect(result.entries).toEqual([
+      { date: '2025-06-16', description: 'Target', amountCents: 10452 },
+    ]);
+    expect(result.skipped.filter((s) => s.reason === 'header')).toHaveLength(2);
+  });
+
+  it('rolls the year over when the month decreases', () => {
+    const memo = `2025
+12月31日：Lyft - 9.99
+1月2日：买菜 - 72.89
+1月
+1月5日：话费 - 18.05`;
+    const result = parseMemo(memo, { defaultYear: 2020 });
+    expect(result.entries.map((e) => e.date)).toEqual(['2025-12-31', '2026-01-02', '2026-01-05']);
+  });
+
+  it('accepts 号 as the day suffix', () => {
+    const result = parseMemo('6月9号：午餐 - 9.44', { defaultYear: 2026 });
+    expect(result.entries).toEqual([{ date: '2026-06-09', description: '午餐', amountCents: 944 }]);
+  });
+
+  it('accepts colon-separated items', () => {
+    const mixed = parseMemo('7月14日：午餐 - 11.14；买菜：23.79', { defaultYear: 2026 });
+    expect(mixed.entries).toEqual([
+      { date: '2026-07-14', description: '午餐', amountCents: 1114 },
+      { date: '2026-07-14', description: '买菜', amountCents: 2379 },
+    ]);
+    const western = parseMemo('2月1日：Cursor: 22.13', { defaultYear: 2026 });
+    expect(western.entries).toEqual([
+      { date: '2026-02-01', description: 'Cursor', amountCents: 2213 },
+    ]);
+  });
+
+  it('accepts a bare amount as a description-less entry', () => {
+    const result = parseMemo('4月5日：18.05', { defaultYear: 2026 });
+    expect(result.entries).toEqual([{ date: '2026-04-05', description: '', amountCents: 1805 }]);
+  });
+});
+
+describe('parseMemo paragraph subtotal checks', () => {
+  it('checks each blank-line block against its own 总 line', () => {
+    const memo = `6月16日：a - 10
+6月17日：b - 20
+总：30
+
+6月18日：c - 5
+总：5`;
+    const result = parseMemo(memo, { defaultYear: 2026 });
+    expect(result.subtotalChecks).toEqual([
+      { line: '总：30', expectedCents: 3000, actualCents: 3000 },
+      { line: '总：5', expectedCents: 500, actualCents: 500 },
+    ]);
+  });
+
+  it('reports a mismatching block without affecting others', () => {
+    const memo = `6月16日：a - 10
+总：99
+
+6月18日：c - 5
+总：5`;
+    const result = parseMemo(memo, { defaultYear: 2026 });
+    expect(result.subtotalChecks[0]).toEqual({
+      line: '总：99',
+      expectedCents: 9900,
+      actualCents: 1000,
+    });
+    expect(result.subtotalChecks[1].expectedCents).toBe(500);
+    expect(result.subtotalChecks[1].actualCents).toBe(500);
+  });
+
+  it('leaves blocks without a 总 line unchecked', () => {
+    const memo = `5月4日：CVS - 33.33
+5月5日：午饭 - 46.70
+
+5月11日：午饭 - 32.54
+总：32.54`;
+    const result = parseMemo(memo, { defaultYear: 2026 });
+    expect(result.subtotalChecks).toHaveLength(1);
+    expect(result.subtotalChecks[0].actualCents).toBe(3254);
+  });
+
+  it('ignores trailing entries after the final 总', () => {
+    const memo = `6月1日：a - 10
+总：10
+
+6月4日：b - 20
+6月5日：c - 30`;
+    const result = parseMemo(memo, { defaultYear: 2026 });
+    expect(result.subtotalChecks).toHaveLength(1);
+    expect(result.entries).toHaveLength(3);
+  });
 });

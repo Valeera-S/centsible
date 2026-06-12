@@ -91,6 +91,7 @@ export const strings = {
     colAmount: 'Amount',
     duplicateTag: 'Duplicate',
     refundTag: 'Refund',
+    noDescription: '(no description)',
     includeRow: (description: string) => `Include ${description}`,
     categoryForRow: (description: string) => `Category for ${description}`,
     importButton: (n: number) => (n === 1 ? 'Import 1 transaction' : `Import ${n} transactions`),
@@ -99,15 +100,20 @@ export const strings = {
     skippedLines: (n: number) => `${n} ${n === 1 ? 'line' : 'lines'} could not be parsed:`,
     skippedPayments: (n: number) =>
       `${n} card ${n === 1 ? 'payment' : 'payments'} skipped (paying the bill is not spending).`,
-    subtotalsMatch: 'Checksum: parsed amounts match the memo subtotals exactly.',
-    subtotalsMismatch: (parsed: string, expected: string) =>
-      `Warning: parsed total ${parsed} does not match the memo subtotals ${expected}.`,
+    subtotalsMatch: (n: number) =>
+      n === 1
+        ? 'Checksum: the memo subtotal matches the parsed amounts exactly.'
+        : `Checksum: all ${n} memo subtotals match the parsed amounts exactly.`,
+    subtotalsMismatch: (line: string, parsed: string) =>
+      `Warning: "${line}" but that block parses to ${parsed}.`,
     csvError:
       'Could not read this CSV. It needs Chase-style columns including Transaction Date, Description, Type, Amount.',
     exportButton: 'Export backup',
     importBackupLabel: 'Backup file',
     backupHint:
       'Backups contain every transaction, category, rule, and setting as a JSON file. Import merges by id; nothing is duplicated.',
+    backupWarning:
+      'Your ledger lives only in this browser. Clearing site data (or uninstalling the browser) erases it permanently - export a backup regularly.',
     backupStats: (added: number, updated: number) =>
       `Merged backup: ${added} added, ${updated} updated.`,
     backupError: 'This file is not a valid Centsible backup.',

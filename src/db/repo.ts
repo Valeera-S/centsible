@@ -18,14 +18,20 @@ const DEFAULT_SETTINGS: SettingsRow = {
   currency: 'USD',
 };
 
-/** First-run seeding; never overwrites data the user already has. */
+/**
+ * First-run seeding plus additive upgrades; never overwrites data the user
+ * already has. Merchant seeds shipped in later versions are added for existing
+ * databases too, but a pattern the user has (or has relearned) is left alone.
+ */
 export async function seedDefaults(db: CentsibleDb): Promise<void> {
   await db.transaction('rw', [db.categories, db.merchantRules, db.settings], async () => {
     if ((await db.categories.count()) === 0) {
       await db.categories.bulkAdd([...DEFAULT_CATEGORIES]);
     }
-    if ((await db.merchantRules.count()) === 0) {
-      await db.merchantRules.bulkAdd([...SEED_MERCHANT_RULES]);
+    const existingPatterns = new Set((await db.merchantRules.toArray()).map((r) => r.pattern));
+    const missingSeeds = SEED_MERCHANT_RULES.filter((r) => !existingPatterns.has(r.pattern));
+    if (missingSeeds.length > 0) {
+      await db.merchantRules.bulkAdd([...missingSeeds]);
     }
     if (!(await db.settings.get(SETTINGS_ID))) {
       await db.settings.add(DEFAULT_SETTINGS);

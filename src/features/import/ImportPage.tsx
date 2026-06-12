@@ -14,7 +14,7 @@ import { FALLBACK_EXPENSE_CATEGORY_ID } from '../../domain/categories';
 import { todayIso } from '../../domain/dates';
 import { markDuplicates } from '../../domain/dedup';
 import { parseBackup, serializeBackup } from '../../domain/importMerge';
-import { formatCents, sumCents } from '../../domain/money';
+import { formatCents } from '../../domain/money';
 import { suggestCategory } from '../../domain/merchantMap';
 import { parseChaseCsv } from '../../domain/parse/chaseCsv';
 import { parseMemo } from '../../domain/parse/memo';
@@ -101,14 +101,12 @@ export function ImportPage() {
 
     const notices: string[] = [];
     const warnings: string[] = [];
-    if (result.subtotals.length > 0) {
-      const parsedTotal = sumCents(result.entries.map((e) => e.amountCents));
-      const expectedTotal = sumCents(result.subtotals);
-      if (parsedTotal === expectedTotal) {
-        notices.push(s.subtotalsMatch);
-      } else {
-        warnings.push(s.subtotalsMismatch(formatCents(parsedTotal), formatCents(expectedTotal)));
-      }
+    const failingChecks = result.subtotalChecks.filter((c) => c.expectedCents !== c.actualCents);
+    if (result.subtotalChecks.length > 0 && failingChecks.length === 0) {
+      notices.push(s.subtotalsMatch(result.subtotalChecks.length));
+    }
+    for (const check of failingChecks) {
+      warnings.push(s.subtotalsMismatch(check.line, formatCents(check.actualCents)));
     }
     const unparsed = result.skipped.filter((line) => line.reason === 'unparsed');
     if (unparsed.length > 0) {
@@ -193,7 +191,7 @@ export function ImportPage() {
         merchant: draft.description,
         source,
       });
-      if (draft.categoryId !== draft.suggestedCategoryId) {
+      if (draft.description && draft.categoryId !== draft.suggestedCategoryId) {
         await learnMerchantRule(db, draft.description, draft.categoryId);
       }
     }
@@ -300,6 +298,7 @@ export function ImportPage() {
       {tab === 'backup' && (
         <div className="import-pane">
           <p className="hint">{s.backupHint}</p>
+          <p className="backup-warning">{s.backupWarning}</p>
           <button type="button" onClick={downloadBackup}>
             {s.exportButton}
           </button>
@@ -345,20 +344,20 @@ export function ImportPage() {
                   <td>
                     <input
                       type="checkbox"
-                      aria-label={s.includeRow(draft.description)}
+                      aria-label={s.includeRow(draft.description || s.noDescription)}
                       checked={draft.include}
                       onChange={(event) => setDraft(draft.key, { include: event.target.checked })}
                     />
                   </td>
                   <td className="cell-mono">{draft.date}</td>
                   <td>
-                    {draft.description}
+                    {draft.description || s.noDescription}
                     {draft.duplicate && <span className="badge">{s.duplicateTag}</span>}
                     {draft.refund && <span className="badge">{s.refundTag}</span>}
                   </td>
                   <td>
                     <select
-                      aria-label={s.categoryForRow(draft.description)}
+                      aria-label={s.categoryForRow(draft.description || s.noDescription)}
                       value={draft.categoryId}
                       onChange={(event) => setDraft(draft.key, { categoryId: event.target.value })}
                     >

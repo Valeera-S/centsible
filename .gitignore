@@ -23,3 +23,7 @@ dev-dist
 *.njsproj
 *.sln
 *.sw?
+
+# Local-only: agent instructions and the owner's real-data fixture
+/CLAUDE.md
+src/domain/parse/memo.fullYear.test.ts
